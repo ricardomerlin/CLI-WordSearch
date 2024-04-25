@@ -36,7 +36,7 @@ def generate_wordsearch(words, size):
 
     return grid
 
-def print_grid(grid):
+def print_grid(grid, found_word_coords_list=None):
     size = len(grid)
     print('  ', end='')
     for i in range(size):
@@ -45,8 +45,12 @@ def print_grid(grid):
     for i in range(size):
         print(f'{chr(65 + i):2}', end=' ')
         for j in range(size):
-            print(grid[i][j] + ' ', end='')
+            if found_word_coords_list and any((i, j) in found_word_coords for found_word_coords in found_word_coords_list):
+                print('\033[4;30;1m' + grid[i][j] + '\033[0m' + '  ', end=' ')
+            else:
+                print(grid[i][j] + '  ', end='')
         print()
+
 
 def validate_coordinates(coordinates, size):
     try:
@@ -70,20 +74,24 @@ def check_word_location(grid, words, coordinates):
 
     for word in words:
         word_length = len(word)
-        for i in range(len(grid)):
-            for j in range(len(grid[i])):
-                if (i, j) == (start_row, start_col):
-                    if end_col - start_col + 1 == word_length:
-                        if ''.join(grid[i][start_col:end_col+1]) == word:
-                            return True
+        if start_row == end_row and end_col - start_col + 1 == word_length:
+            if ''.join(grid[start_row][start_col:end_col + 1]) == word:
+                return [(start_row, j) for j in range(start_col, end_col + 1)]
+        elif start_col == end_col and end_row - start_row + 1 == word_length:
+            word_vertical = ''.join(grid[i][start_col] for i in range(start_row, end_row + 1))
+            if word_vertical == word:
+                return [(i, start_col) for i in range(start_row, end_row + 1)]
+        elif end_row - start_row + 1 == word_length and end_col - start_col + 1 == word_length:
+            word_diagonal = ''.join(grid[start_row + k][start_col + k] for k in range(word_length))
+            if word_diagonal == word:
+                return [(start_row + k, start_col + k) for k in range(word_length)]
 
-                    if end_row - start_row + 1 == word_length:
-                        word_vertical = ''.join(grid[k][j] for k in range(start_row, end_row+1))
-                        if word_vertical == word:
-                            return True
-    return False
+    return []
+
 
 def main():
+    found_woord_coords_list = []
+
     print("Welcome to CLI Word Search!")
     print("Select word search difficulty:")
     print("1. Easy")
@@ -116,10 +124,14 @@ def main():
 
         coordinates = validate_coordinates(user_input, difficulty)
         if coordinates:
-            if check_word_location(wordsearch_grid, words, coordinates):
+            found_word_coords = check_word_location(wordsearch_grid, words, coordinates)
+            if found_word_coords:
                 print("Successful! You found a word.")
+                found_woord_coords_list.append(found_word_coords)
+                print_grid(wordsearch_grid, found_woord_coords_list)
             else:
                 print("No word found at that location. Try again!")
+                print_grid(wordsearch_grid, found_woord_coords_list)
         else:
             print("Invalid input format. Please enter coordinates in the format 'A2 to C4'.")
 
